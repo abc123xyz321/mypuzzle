@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Authentication</title>
+
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: background-image 0.4s ease, background-color 0.4s ease;
+}
+
+.container {
+    max-width: 500px;
+    margin: 40px auto 0 auto;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.subtitle {
+    margin-top: 10px;
+    font-size: 16px;
+    color: #555;
+}
+
+button {
+    padding: 15px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #007BFF;
+    color: white;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+#startBtn {
+    margin-top: 20px;
+}
+
+.option-btn {
+    width: 100%;
+    margin-top: 15px;
+    background-color: #6c757d;
+}
+
+.option-btn:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.option-btn.correct {
+    background-color: #28a745 !important;
+}
+
+.option-btn.incorrect {
+    background-color: #dc3545 !important;
+}
+
+.submit-btn {
+    background-color: #28a745;
+    margin: 25px auto 0 auto;
+    display: block;
+}
+
+.submit-btn:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+#countdown {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    display: none;
+    z-index: 1000;
+}
+
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    font-size: 24px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 9999;
+}
+
+#questionContainer {
+    display: none;
+}
+
+#questionText {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+#completionMessage {
+    display: none;
+    margin-top: 20px;
+    font-size: 16px;
+    font-family: "Courier New", monospace;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container" id="startContainer">
+    <h1>Authentication</h1>
+    <div class="subtitle">Memorize the image</div>
+    <button id="startBtn">Start</button>
+</div>
+
+<div class="container" id="questionContainer">
+    <div id="questionText"></div>
+
+    <button class="option-btn"></button>
+    <button class="option-btn"></button>
+    <button class="option-btn"></button>
+    <button class="option-btn"></button>
+
+    <button id="submitBtn" class="submit-btn" disabled>Submit</button>
+    <div id="completionMessage">periwinkletree80</div>
+</div>
+
+<div id="countdown">5</div>
+
+<div id="overlay">
+    Incorrect answer! You must refresh the page to try again.
+</div>
+
+<script>
+const IMAGE_URL =
+    "https://www.dropbox.com/scl/fi/6vhfxyrhwiob8w7kaccvp/the-image.jpg?rlkey=js64mdrihghj1r74z4f8ygxqq&st=u1z10ppw&raw=1";
+
+const preloadImage = new Image();
+preloadImage.src = IMAGE_URL;
+
+const questions = [
+    {
+        question: "What was the color of the cow?",
+        options: ["Blue", "Red", "Green", "Yellow"],
+        correctIndex: 0
+    },
+    {
+        question: "What language was the black saucer speaking in?",
+        options: ["English", "Spanish", "French", "Zulu"],
+        correctIndex: 2
+    },
+    {
+        question: "How many pennies were in the image?",
+        options: ["Five", "Seven", "Four", "Six"],
+        correctIndex: 3
+    },
+    {
+        question: "What was the name of the farm?",
+        options: ["Steve", "Sugma", "Jobs", "Ligma"],
+        correctIndex: 1
+    },
+    {
+        question: "Where are the four magenta pixels in the image?",
+        options: ["On the barn", "In the grass", "On a fence post", "By the rainbow"],
+        correctIndex: 2
+    },
+    {
+        question: "Whose face is behind the barn?",
+        options: ["Donald Trump", "Jeffrey Epstein", "Charlie Kirk", "Barack Obama"],
+        correctIndex: 3
+    },
+    {
+        question: "What number is on the right door?",
+        options: ["Three", "Four", "Five", "Six"],
+        correctIndex: 1
+    },
+    {
+        question: "What did the message in the sky say?",
+        options: ["You're gay", "I'm gay", "That's gay", "The N-Word"],
+        correctIndex: 2
+    },
+    {
+        question: "How many clouds are in the sky?",
+        options: ["One", "Three", "Sevem", "Five"],
+        correctIndex: 3
+    },
+    {
+        question: "What was the secret grass message?",
+        options: ["UR MOM", "YOUR MOM", "THOU MOTHER", "There was a secret message???"],
+        correctIndex: 0
+    }
+];
+
+const startBtn = document.getElementById("startBtn");
+const startContainer = document.getElementById("startContainer");
+const countdownEl = document.getElementById("countdown");
+const questionContainer = document.getElementById("questionContainer");
+const questionText = document.getElementById("questionText");
+const optionButtons = document.querySelectorAll(".option-btn");
+const overlay = document.getElementById("overlay");
+const submitBtn = document.getElementById("submitBtn");
+const completionMessage = document.getElementById("completionMessage");
+
+let answeredCorrectly = false;
+
+startBtn.addEventListener("click", () => {
+    startContainer.style.display = "none";
+
+    document.body.style.backgroundColor = "#000";
+    document.body.style.backgroundImage = `url('${IMAGE_URL}')`;
+
+    countdownEl.style.display = "block";
+    let timeLeft = 5;
+    countdownEl.textContent = timeLeft;
+
+    const timer = setInterval(() => {
+        timeLeft--;
+        countdownEl.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            document.body.style.backgroundImage = "none";
+            document.body.style.backgroundColor = "#f5f5f5";
+            countdownEl.style.display = "none";
+            showQuestion();
+        }
+    }, 1000);
+});
+
+/* Fisher–Yates shuffle */
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function showQuestion() {
+    const q = questions[Math.floor(Math.random() * questions.length)];
+
+    questionText.textContent = q.question;
+    questionContainer.style.display = "block";
+
+    answeredCorrectly = false;
+    submitBtn.disabled = true;
+    completionMessage.style.display = "none";
+
+    // Build & shuffle options
+    const shuffledOptions = shuffle(
+        q.options.map((text, index) => ({
+            text,
+            isCorrect: index === q.correctIndex
+        }))
+    );
+
+    optionButtons.forEach((btn, index) => {
+        const opt = shuffledOptions[index];
+        btn.textContent = opt.text;
+        btn.classList.remove("correct", "incorrect");
+        btn.disabled = false;
+
+        btn.onclick = () => {
+            optionButtons.forEach(b => b.disabled = true);
+
+            if (opt.isCorrect) {
+                btn.classList.add("correct");
+                submitBtn.disabled = false;
+                answeredCorrectly = true;
+            } else {
+                btn.classList.add("incorrect");
+                overlay.style.display = "flex";
+            }
+        };
+    });
+}
+
+submitBtn.addEventListener("click", () => {
+    if (!answeredCorrectly) return;
+    completionMessage.style.display = "block";
+});
+</script>
+
+</body>
+</html>

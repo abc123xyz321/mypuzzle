@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authentication</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 20px; overflow: hidden; font-family: Arial, sans-serif; background: #f5f5f5; }
+    .container { max-width: 500px; margin: auto; padding: 30px; text-align: center; background: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,.1); }
+    button { padding: 15px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; color: white; background: #007BFF; }
+    button:hover:not(:disabled) { background: #0056b3; }
+    button:disabled { opacity: .6; cursor: default; }
+    .submit-btn { background: #28a745; }
+    .submit-btn:hover:not(:disabled) { background: #218838; }
+    #gameScreen { display: none; }
+    #timer { position: fixed; top: 20px; left: 20px; font-size: 18px; font-weight: bold; }
+    #challenge { position: fixed; inset: 0; display: grid; place-items: center; padding: 72px 16px 36px; }
+    #mazePanel { width: min(620px, 100%); padding: 22px; text-align: center; background: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,.1); }
+    #mazeWrap { position: relative; width: min(510px, 100%); margin: 16px auto 0; aspect-ratio: 1; }
+    #maze { display: block; width: 100%; height: 100%; background: #fff; touch-action: none; cursor: crosshair; }
+    #goalButton { position: absolute; left: 50%; top: 50%; z-index: 2; transform: translate(-50%, -50%); padding: 8px 11px; font-size: 12px; pointer-events: auto; }
+    #status { min-height: 20px; margin: 10px 0 0; font-weight: bold; }
+    #hint { margin: 8px 0 0; color: #555; font-size: 14px; }
+    #placeholderText { position: fixed; bottom: 30px; left: 20px; display: none; font-family: "Courier New", monospace; }
+    #overlay { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; color: white; background: rgba(0,0,0,.7); font-size: 24px; }
+    @media (max-width: 520px) { body { padding: 12px; } #timer { top: 12px; left: 12px; } #mazePanel { padding: 14px; } #challenge { padding: 58px 10px 16px; } #placeholderText { bottom: 16px; left: 12px; } }
+  </style>
+</head>
+<body>
+  <div class="container" id="startScreen"><h1>Authentication</h1><button id="startBtn">Start</button></div>
+  <div id="gameScreen">
+    <div id="timer">Time left: 120s</div>
+    <div id="challenge"><div id="mazePanel">
+      <strong>Find the submit button</strong>
+      <div id="mazeWrap">
+        <canvas id="maze" width="680" height="680" aria-label="Maze authentication challenge"></canvas>
+        <button id="goalButton" class="submit-btn" disabled>Submit</button>
+      </div>
+      <div id="status">Reach the center without touching a wall.</div>
+      <p id="hint"></p>
+    </div></div>
+    <div id="placeholderText">browntable78</div>
+  </div>
+  <div id="overlay">Time's up! Refresh to try again.</div>
+  <script>
+    const startBtn = document.getElementById('startBtn'), startScreen = document.getElementById('startScreen'), gameScreen = document.getElementById('gameScreen');
+    const canvas = document.getElementById('maze'), ctx = canvas.getContext('2d'), goalButton = document.getElementById('goalButton');
+    const status = document.getElementById('status'), hint = document.getElementById('hint'), timerDisplay = document.getElementById('timer'), overlay = document.getElementById('overlay'), placeholderText = document.getElementById('placeholderText');
+    const CELLS = 17, SIZE = canvas.width, CELL = SIZE / CELLS, GOAL = { x: 8, y: 8 }, START = { x: 0, y: 0 };
+    // Use the device classification first; the media query is a fallback for mobile browsers.
+    const reportedMobile = navigator.userAgentData?.mobile;
+    const isMobile = reportedMobile ?? (/Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent) || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 800px)').matches));
+    let maze, player, previousPoint, dragging = false, timeLeft = 120, gameOver = false, timer;
+
+    hint.textContent = isMobile ? 'Drag the 🚶‍♂️ from the start to the Submit button. Walls reset it.' : 'Move your cursor from the start to the Submit button. Walls send it back.';
+    function makeMaze() {
+      const grid = Array.from({ length: CELLS }, () => Array.from({ length: CELLS }, () => ({ n: true, e: true, s: true, w: true, seen: false })));
+      const stack = [{ x: 0, y: 0 }]; grid[0][0].seen = true;
+      const choices = [{ dx: 0, dy: -1, a: 'n', b: 's' }, { dx: 1, dy: 0, a: 'e', b: 'w' }, { dx: 0, dy: 1, a: 's', b: 'n' }, { dx: -1, dy: 0, a: 'w', b: 'e' }];
+      while (stack.length) {
+        const here = stack[stack.length - 1];
+        const options = choices.filter(d => grid[here.y + d.dy]?.[here.x + d.dx] && !grid[here.y + d.dy][here.x + d.dx].seen);
+        if (!options.length) { stack.pop(); continue; }
+        const direction = options[Math.floor(Math.random() * options.length)], next = { x: here.x + direction.dx, y: here.y + direction.dy };
+        grid[here.y][here.x][direction.a] = false; grid[next.y][next.x][direction.b] = false; grid[next.y][next.x].seen = true; stack.push(next);
+      }
+      return grid;
+    }
+    function centerOf(cell) { return { x: (cell.x + .5) * CELL, y: (cell.y + .5) * CELL }; }
+    function draw() {
+      ctx.clearRect(0, 0, SIZE, SIZE); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, SIZE, SIZE);
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 6; ctx.lineCap = 'square'; ctx.beginPath();
+      maze.forEach((row, y) => row.forEach((cell, x) => {
+        const left = x * CELL, top = y * CELL, right = left + CELL, bottom = top + CELL;
+        if (cell.n) { ctx.moveTo(left, top); ctx.lineTo(right, top); }
+        if (cell.w) { ctx.moveTo(left, top); ctx.lineTo(left, bottom); }
+        if (x === CELLS - 1 && cell.e) { ctx.moveTo(right, top); ctx.lineTo(right, bottom); }
+        if (y === CELLS - 1 && cell.s) { ctx.moveTo(left, bottom); ctx.lineTo(right, bottom); }
+      })); ctx.stroke();
+      const start = centerOf(START); ctx.fillStyle = '#e9f4ff'; ctx.fillRect(3, 3, CELL - 6, CELL - 6); ctx.fillStyle = '#555'; ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillText('START', start.x, start.y + 5);
+      const point = centerOf(player);
+      ctx.font = `${Math.floor(CELL * .72)}px Arial`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🚶‍♂️', point.x, point.y + 2);
+      ctx.textBaseline = 'alphabetic';
+    }
+    function pointFromEvent(event) { const box = canvas.getBoundingClientRect(); return { x: (event.clientX - box.left) * SIZE / box.width, y: (event.clientY - box.top) * SIZE / box.height }; }
+    function cellAt(point) { return { x: Math.min(CELLS - 1, Math.max(0, Math.floor(point.x / CELL))), y: Math.min(CELLS - 1, Math.max(0, Math.floor(point.y / CELL))) }; }
+    function canEnter(from, to) {
+      const dx = to.x - from.x, dy = to.y - from.y;
+      if (Math.abs(dx) + Math.abs(dy) !== 1) return false;
+      return dx === 1 ? !maze[from.y][from.x].e : dx === -1 ? !maze[from.y][from.x].w : dy === 1 ? !maze[from.y][from.x].s : !maze[from.y][from.x].n;
+    }
+    function resetPlayer() { player = { ...START }; previousPoint = centerOf(START); status.textContent = 'Wall hit — returned to the start.'; goalButton.disabled = true; draw(); }
+    function reachedGoal() {
+      const atGoal = player.x === GOAL.x && player.y === GOAL.y;
+      const oneOpenStepAway = Math.abs(player.x - GOAL.x) + Math.abs(player.y - GOAL.y) === 1 && canEnter(player, GOAL);
+      goalButton.disabled = !(atGoal || oneOpenStepAway);
+      if (!goalButton.disabled) status.textContent = 'Authentication path complete. Submit is unlocked.';
+    }
+    function travelTo(point) {
+      const from = previousPoint || centerOf(player), distance = Math.hypot(point.x - from.x, point.y - from.y), steps = Math.max(1, Math.ceil(distance / 3));
+      let current = { ...player };
+      for (let i = 1; i <= steps; i++) {
+        const sample = { x: from.x + (point.x - from.x) * i / steps, y: from.y + (point.y - from.y) * i / steps }, next = cellAt(sample);
+        if (next.x !== current.x || next.y !== current.y) { if (!canEnter(current, next)) { resetPlayer(); return; } current = next; }
+      }
+      player = current; previousPoint = point; draw(); reachedGoal();
+    }
+    function startTimer() { timerDisplay.textContent = `Time left: ${timeLeft}s`; timer = setInterval(() => { timeLeft--; timerDisplay.textContent = `Time left: ${timeLeft}s`; if (timeLeft <= 0) { clearInterval(timer); gameOver = true; goalButton.disabled = true; overlay.style.display = 'flex'; } }, 1000); }
+    function pointerDown(event) {
+      if (gameOver || (!isMobile && event.pointerType === 'mouse')) return;
+      const point = pointFromEvent(event), start = centerOf(player);
+      if (Math.hypot(point.x - start.x, point.y - start.y) > CELL * .65) return;
+      dragging = true; canvas.setPointerCapture?.(event.pointerId); event.preventDefault();
+    }
+    function pointerMove(event) {
+      if (gameOver || (isMobile && !dragging)) return;
+      if (!isMobile && event.pointerType !== 'mouse') return;
+      event.preventDefault(); travelTo(pointFromEvent(event));
+    }
+    function pointerUp(event) { dragging = false; canvas.releasePointerCapture?.(event.pointerId); }
+    startBtn.addEventListener('click', () => { startScreen.style.display = 'none'; gameScreen.style.display = 'block'; maze = makeMaze(); player = { ...START }; previousPoint = centerOf(START); goalButton.disabled = true; draw(); startTimer(); });
+    canvas.addEventListener('pointerdown', pointerDown); canvas.addEventListener('pointermove', pointerMove); canvas.addEventListener('pointerup', pointerUp); canvas.addEventListener('pointercancel', pointerUp);
+    goalButton.addEventListener('click', () => { placeholderText.style.display = 'block'; });
+  </script>
+</body>
+</html>

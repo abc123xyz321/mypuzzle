@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Authentication</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    overflow: hidden;
+}
+
+#startScreen, #authScreen {
+    position: absolute;
+    inset: 0;
+}
+
+
+.container {
+    max-width: 500px;
+    margin: 40px auto 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+
+button {
+    padding: 15px 30px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: #007BFF;
+    color: white;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+#timer {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#target {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#score {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.number {
+    position: absolute;
+    font-size: 48px;
+    cursor: grab;
+    user-select: none;
+}
+
+/* Mobile-specific emoji size */
+@media (max-width: 768px) {
+    .number {
+        font-size: 32px; /* smaller on mobile */
+    }
+}
+
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-size: 48px;
+    font-weight: bold;
+    z-index: 1000;
+    color: white;
+}
+
+#overlay.correct {
+    background: rgba(40, 167, 69, 0.85);
+}
+
+#overlay.incorrect {
+    background: rgba(220, 53, 69, 0.85);
+}
+
+#overlay.timeout {
+    background: rgba(0,0,0,0.7);
+    font-size: 24px;
+}
+
+#submitContainer {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#submitBtn {
+    background-color: #28a745;
+    color: white;
+    font-size: 22px;
+    padding: 15px 40px;
+    border-radius: 6px;
+}
+
+#submitBtn:hover {
+    background-color: #218838;
+}
+
+
+#placeholder {
+    display: none;
+    margin-top: 20px;
+    font-family: "Courier New", monospace;
+}
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+    <div class="container">
+        <h1>Authentication</h1>
+        <button id="startBtn">Start</button>
+    </div>
+</div>
+
+<div id="authScreen" style="display:none;">
+    <div id="timer">5</div>
+    <div id="target">Target: --</div>
+    <div id="score">0/3</div>
+</div>
+
+<div id="overlay"></div>
+
+<div id="submitContainer">
+    <button id="submitBtn">Submit</button>
+    <div id="placeholder">greenbicycle22</div>
+</div>
+
+
+<script>
+const emojis = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+let numbers = [];
+let currentDrag = null;
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let target = 0;
+let score = 0;
+let timer = 5;
+let resolving = false;
+let interval;
+
+const startBtn = document.getElementById("startBtn");
+const startScreen = document.getElementById("startScreen");
+const authScreen = document.getElementById("authScreen");
+const MIN_DISTANCE = 90;
+const MAX_ATTEMPTS = 50;
+const timerEl = document.getElementById("timer");
+const targetEl = document.getElementById("target");
+const scoreEl = document.getElementById("score");
+const overlay = document.getElementById("overlay");
+const submitBtn = document.getElementById("submitBtn");
+const placeholder = document.getElementById("placeholder");
+
+startBtn.onclick = () => {
+    startScreen.style.display = "none";
+    authScreen.style.display = "block";
+    resetRound();
+};
+
+function resetRound() {
+    resolving = false;
+    clearInterval(interval);
+    overlay.style.display = "none";
+    removeNumbers();
+    timer = 5;
+    timerEl.textContent = timer;
+    target = Math.floor(Math.random() * 15) + 3;
+    targetEl.textContent = `Target: ${target}`;
+    spawnNumbers();
+    startTimer();
+}
+
+
+function startTimer() {
+    interval = setInterval(() => {
+        timer--;
+        timerEl.textContent = timer;
+        if (timer <= 0) {
+            clearInterval(interval);
+forceReleaseDrag()
+            overlay.className = "timeout";
+            overlay.textContent = "Time's up! Refresh to try again.";
+            overlay.style.display = "flex";
+        }
+    }, 1000);
+}
+
+function spawnNumbers() {
+    const placed = [];
+
+    emojis.forEach((emoji, i) => {
+        const div = document.createElement("div");
+        div.className = "number";
+        div.textContent = emoji;
+        div.dataset.value = i + 1;
+
+        let x, y;
+        let attempts = 0;
+        let valid = false;
+
+        while (!valid && attempts < MAX_ATTEMPTS) {
+            attempts++;
+
+            x = Math.random() * (window.innerWidth - 80);
+            y = Math.random() * (window.innerHeight - 140);
+
+            valid = true;
+
+            for (const p of placed) {
+                const dx = x - p.x;
+                const dy = y - p.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < MIN_DISTANCE) {
+                    valid = false;
+                    break;
+                }
+            }
+        }
+
+        div.style.left = x + "px";
+        div.style.top = y + "px";
+
+        makeDraggable(div);
+        document.body.appendChild(div);
+
+        placed.push({ x, y });
+        numbers.push(div);
+    });
+}
+
+
+function removeNumbers() {
+    numbers.forEach(n => n.remove());
+    numbers = [];
+}
+
+function makeDraggable(el) {
+    let offsetX = 0;
+    let offsetY = 0;
+
+    const startDrag = (clientX, clientY) => {
+        isDragging = true;
+        currentDrag = el;
+
+        offsetX = clientX - el.offsetLeft;
+        offsetY = clientY - el.offsetTop;
+
+        el.style.cursor = "grabbing";
+        el.style.zIndex = 999;
+    };
+
+    const moveDrag = (clientX, clientY) => {
+        if (!isDragging || currentDrag !== el) return;
+
+        el.style.left = clientX - offsetX + "px";
+        el.style.top = clientY - offsetY + "px";
+
+        checkCollision(el);
+    };
+
+    const endDrag = () => {
+        forceReleaseDrag();
+    };
+
+    // Mouse events
+    el.addEventListener("mousedown", e => startDrag(e.clientX, e.clientY));
+    document.addEventListener("mousemove", e => moveDrag(e.clientX, e.clientY));
+    document.addEventListener("mouseup", endDrag);
+
+    // Touch events
+    el.addEventListener("touchstart", e => {
+        const touch = e.touches[0];
+        startDrag(touch.clientX, touch.clientY);
+        e.preventDefault(); // prevent scrolling while dragging
+    }, { passive: false });
+
+    document.addEventListener("touchmove", e => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        moveDrag(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    document.addEventListener("touchend", e => endDrag());
+}
+
+
+function checkCollision(active) {
+    numbers.forEach(other => {
+        if (other === active) return;
+        const r1 = active.getBoundingClientRect();
+        const r2 = other.getBoundingClientRect();
+
+        if (!(r1.right < r2.left || r1.left > r2.right ||
+              r1.bottom < r2.top || r1.top > r2.bottom)) {
+            evaluate(parseInt(active.dataset.value) + parseInt(other.dataset.value));
+        }
+    });
+}
+
+function evaluate(sum) {
+    if (resolving) return;
+    resolving = true;
+
+    clearInterval(interval);
+
+    if (sum === target) {
+        score++;
+        scoreEl.textContent = `${score}/3`;
+forceReleaseDrag();
+        showOverlay("CORRECT", "correct");
+    } else {
+        score = 0;
+        scoreEl.textContent = "0/3";
+forceReleaseDrag();
+        showOverlay("INCORRECT", "incorrect");
+    }
+}
+
+
+function showOverlay(text, type) {
+    overlay.textContent = text;
+    overlay.className = type;
+    overlay.style.display = "flex";
+
+    setTimeout(() => {
+        overlay.style.display = "none";
+if (score >= 3) {
+    removeNumbers();
+    document.getElementById("submitContainer").style.display = "flex";
+    submitBtn.style.display = "inline-block";
+}
+else {
+forceReleaseDrag();
+overlay.className = "";
+overlay.classList.add("timeout");
+overlay.style.display = "flex";
+
+resetRound();
+        }
+    }, 2000);
+}
+
+document.addEventListener("mousemove", e => {
+    if (!isDragging || !currentDrag) return;
+
+    currentDrag.style.left = e.clientX - dragOffsetX + "px";
+    currentDrag.style.top = e.clientY - dragOffsetY + "px";
+
+    checkCollision(currentDrag);
+});
+
+document.addEventListener("mouseup", () => {
+    forceReleaseDrag();
+});
+
+function forceReleaseDrag() {
+    if (!isDragging || !currentDrag) return;
+
+    currentDrag.style.cursor = "grab";
+    currentDrag.style.zIndex = "";
+
+    isDragging = false;
+    currentDrag = null;
+}
+
+submitBtn.onclick = () => {
+    submitBtn.style.display = "none";
+    placeholder.style.display = "block";
+};
+</script>
+
+</body>
+</html>

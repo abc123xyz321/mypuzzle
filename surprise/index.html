@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yay happy fun surprise :)))))</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Comic Sans MS", "Comic Sans", cursive;
+    }
+
+    /* Initial prompt */
+    #prompt {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      font-size: 3em;
+      text-align: center;
+      cursor: pointer;
+      background-color: white;
+    }
+
+    /* Fullscreen surprise */
+    #surprise {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      z-index: 10;
+    }
+
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="prompt">Click for a surprise ;)</div>
+  <div id="surprise"></div>
+  <audio id="audio">
+    <source src="https://www.dropbox.com/scl/fi/sdpcdwxblj1iwt0j67c7i/saygex.mp3?rlkey=6gh61urdn9rmpkilhjeijow5n&st=aiqi3a3l&raw=1" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+<script>
+  const prompt = document.getElementById('prompt');
+  const surprise = document.getElementById('surprise');
+  const audio = document.getElementById('audio');
+
+  // Preload image
+  const imgCache = new Image();
+  imgCache.src = 'https://www.dropbox.com/scl/fi/x2sb1xs2ft8giwhxpkdtb/thisisanimage.jpg?rlkey=qhup58h3nqa4yjosslrbrl3bl&st=ux14i9wz&raw=1';
+
+  // Preload audio
+  audio.preload = 'auto';
+
+  function isMobile() {
+    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+  if (isMobile()) {
+    prompt.textContent = "Tap for a surprise ;)";
+  }
+
+  prompt.addEventListener('click', () => {
+    prompt.style.display = 'none';
+    surprise.style.display = 'block';
+    surprise.style.backgroundImage = `url('${imgCache.src}')`;
+    audio.play().catch(() => {});
+  }, { once: true });
+</script>
+</body>
+</html>

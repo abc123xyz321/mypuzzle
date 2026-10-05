@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Page</title>
+  <style>
+    body { font-family: 'Courier New', monospace; margin:0; padding:10px; }
+    .top { position:fixed; top:10px; left:10px; display:flex; gap:6px; align-items:center; }
+    input, button { font-family: 'Courier New', monospace; }
+    input[type='text'] { width:16.6667vw; } /* roughly one-sixth of screen width */
+    #mainResponse { margin-top: 100px; }
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <input id="mainBox" type="text" />
+    <button id="mainBtn">Enter</button>
+  </div>
+
+  <div id="mainResponse"></div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('mainBox');
+  const btn = document.getElementById('mainBtn');
+  const response = document.getElementById('mainResponse');
+
+  // 1 in 5 chance to show the special placeholder
+  if (Math.random() < 0.2) {
+    box.placeholder = "Input something. E.g., '1987'";
+  } else {
+    box.placeholder = "Input something. E.g., 'help'";
+  }
+
+  // Database of normal triggers
+  const triggers = {
+    'greenbicycle22': '0. k qvvzt cdyu',
+    'redhouse49': '1. swap the second and third words from the given in 0.',
+    'yellowball61': 'StepNoTwo. 85 56 16 1 / 90 2 / 6 53 15 1 68',
+    'magentabook74': '3. hifts heac dwor etfl as uhmc sa hte etnx esntaieulq mprei refta sxi',
+    'whitebox34': 'pɹoʍ ɥɔɐǝ ɟo ɹǝʇʇǝl ʇsɐl puɐ ʇsɹᴉɟ ǝɥʇ dɐʍs ˙ɹnoɟ',
+    'tealrock97': '5. Atbash every other letter (like in this pattern, where each A is an atbashed character: A BABA BABAB',
+    'periwinkletree80': '6. shift the 1st word the amount of vaginas a kangaroo has, the 2nd word the amount of penises a snake has, and the 3rd the amount of testicles hitler had',
+    'orangecomputer17': '7. Kehren Sie das zweite Wort um.',
+    'silverroom23': '⠦ ⠁⠞⠃⠁⠎⠓ ⠞⠓⠑ ⠞⠓⠊⠗⠙ ⠺⠕⠗⠙',
+    'browntable78': '9. Shift (x²-5x+6)/(x-2)+2*√(x -2)+(x-3)³=2 right',
+    'maroontelephone66': '10. Do not not not not not not not remove all R\'s and V\'s, do not not not not not not not not not not not not atbash',
+    'alex': 'fuck off',
+    'alex glasier': 'fuck off',
+    'help': 'Find the passwords...',
+    'bluescissors11': 'bruh that one was literally the incorrect one',
+    'jew': 'I know you are already!',
+    'Netanyahu': 'Unfortunately he doesnt have anything to do with this puzzle'
+  };
+
+  const specialTrigger = '1987';
+  const specialResponses = [
+    'That input doesn\'t do anything', 'I told you it doesn\'t do anything', 'Why aren\'t you listening?', 'Stop inputting that',
+    'You better stop right now', 'I\'m warning you', 'You won\'t like what you see', 'Please, I beg you!', 'STOP IMMEDIATELY', 'Fine then, suit it yourself...'
+  ];
+  let specialCount = 0;
+
+  function handleInput() {
+    const val = box.value.trim().toLowerCase();
+
+    if (val === specialTrigger) {
+      if (specialCount < specialResponses.length) {
+        response.textContent = specialResponses[specialCount];
+        specialCount++;
+      } else {
+        window.location.replace('995758575845757475/');
+        return;
+      }
+    } else if (triggers[val]) {
+      response.textContent = triggers[val];
+      specialCount = 0;
+    } else {
+      response.textContent = 'No response';
+      specialCount = 0;
+    }
+
+    box.value = '';
+    box.focus();
+  }
+
+  // Prevent copying from the output
+  response.addEventListener('copy', (e) => {
+    e.preventDefault();
+    alert('NOOOOO STOPPPP YOU CAN\'T COPY :(');
+  });
+
+  btn.addEventListener('click', handleInput);
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleInput();
+    }
+  });
+
+  box.focus();
+});
+</script>
+
+</body>
+</html>

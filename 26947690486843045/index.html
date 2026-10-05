@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>the</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  .container {
+    max-width: 500px;
+    margin: auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,.1);
+    text-align: center;
+  }
+
+  button {
+    padding: 15px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #007BFF;
+    color: white;
+  }
+  button:hover:not(:disabled) { background: #0056b3; }
+  button:disabled { opacity: .6; cursor: default; }
+  .submit-btn { background: #28a745; }
+  .submit-btn:hover:not(:disabled) { background: #218838; }
+
+  #gameScreen { display: none; }
+
+  #timer {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    font-size: 18px;
+    font-weight: bold;
+  }
+  #submitBtn { position: fixed; bottom: 20px; left: 20px; }
+#placeholderText {
+    position: fixed;
+    bottom: 30px;
+    left: 180px;
+    display: none;
+    font-family: "Courier New", monospace;
+}
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    z-index: 9999;
+  }
+
+  /* triangle container sizes */
+  /* NOTE: boxWidth x boxHeight must match the SVG viewBox used below */
+  :root { --box-w: 160px; --box-h: 120px; }
+
+  /* outline (SVG) container */
+  #outlineBox, #playerBox {
+    position: absolute;
+    width: var(--box-w);
+    height: var(--box-h);
+    pointer-events: none;
+    transform-origin: center center; /* rotate around center */
+  }
+
+  /* the player fill (blue) */
+  #playerBox svg polygon {
+    fill: rgba(0,123,255,.75);
+    stroke: rgba(0,0,0,.08);
+    stroke-width: 1;
+  }
+
+  /* the target outline (dashed) */
+  #outlineBox svg polygon {
+    fill: transparent;
+    stroke: #555;
+    stroke-width: 3;
+    stroke-dasharray: 8 6; /* dashed outline following the triangle */
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* FIXED CONTROLS LAYOUT */
+  .controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: grid;
+    grid-template-columns: 50px 50px 50px;
+    grid-template-rows: 50px 50px 50px;
+    gap: 6px;
+  }
+  .controls button { padding: 0; font-size: 20px; }
+  #upBtn    { grid-column: 2; grid-row: 1; }
+  #leftBtn  { grid-column: 1; grid-row: 2; }
+  #rotateBtn{ grid-column: 2; grid-row: 2; }
+  #rightBtn { grid-column: 3; grid-row: 2; }
+  #downBtn  { grid-column: 2; grid-row: 3; }
+
+  /* small responsiveness tweak so triangles stay fully visible on tiny screens */
+  @media (max-width:420px) {
+    :root { --box-w: 120px; --box-h: 90px; }
+    #outlineBox, #playerBox { width: var(--box-w); height: var(--box-h); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="startScreen">
+  <h1>Authentication</h1>
+  <button id="startBtn">Start</button>
+</div>
+
+<div id="gameScreen">
+  <div id="timer">Time left: 60s</div>
+  <button id="submitBtn" class="submit-btn" disabled>Submit</button>
+    <div id="placeholderText">yellowball61</div>
+
+  <!-- outlineBox: dashed triangle (SVG) -->
+  <div id="outlineBox" aria-hidden="true">
+    <!-- viewBox matches the "logical" triangle size; we'll use same points for player -->
+    <svg width="100%" height="100%" viewBox="0 0 160 120" preserveAspectRatio="none" aria-hidden="true">
+      <!-- Points: bottom-left (0,120), bottom-right (160,120), top-ish (0,50)
+           This is a RIGHT triangle with right angle at (0,120) and unequal legs (scalene) -->
+      <polygon points="0,120 160,120 0,50"></polygon>
+    </svg>
+  </div>
+
+  <!-- playerBox: filled triangle (SVG) -->
+  <div id="playerBox" aria-hidden="true">
+    <svg width="100%" height="100%" viewBox="0 0 160 120" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,120 160,120 0,50"></polygon>
+    </svg>
+  </div>
+
+  <div class="controls">
+    <button id="upBtn">▲</button>
+    <button id="leftBtn">◀</button>
+    <button id="rotateBtn">↻</button>
+    <button id="rightBtn">▶</button>
+    <button id="downBtn">▼</button>
+  </div>
+</div>
+
+<div id="overlay">Time's up! Refresh to try again.</div>
+
+<script>
+  // constants — keep these in sync with the SVG viewBox used above
+  const BOX_W = 160;
+  const BOX_H = 120;
+
+  const startBtn = document.getElementById('startBtn');
+  const startScreen = document.getElementById('startScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const submitBtn = document.getElementById('submitBtn');
+  const timerDisplay = document.getElementById('timer');
+  const overlay = document.getElementById('overlay');
+
+  const outlineBox = document.getElementById('outlineBox');
+  const playerBox = document.getElementById('playerBox');
+
+  const upBtn = document.getElementById('upBtn');
+  const downBtn = document.getElementById('downBtn');
+  const leftBtn = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+  const rotateBtn = document.getElementById('rotateBtn');
+
+  let timeLeft = 60;
+  let timer;
+  let gameOver = false;
+  let actionInterval = null;
+let shiftHeld = false;
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Shift') shiftHeld = true;
+});
+
+document.addEventListener('keyup', e => {
+  if (e.key === 'Shift') shiftHeld = false;
+});
+
+
+  // logical positions are the top-left of the bounding box of the triangle (same for outline and player)
+  let player = { x: 0, y: 0, rot: 0 };
+  let target = { x: 0, y: 0, rot: 0 };
+
+  startBtn.onclick = () => {
+    startScreen.style.display = 'none';
+    gameScreen.style.display = 'block';
+    setupGame();
+    startTimer();
+  };
+
+function setupGame() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  // Random triangle dimensions (keeping min size 50px, max 150px)
+  const triWidth = Math.floor(Math.random() * 100) + 50;  // 50–150px
+  const triHeight = Math.floor(Math.random() * 100) + 50; // 50–150px
+
+  // Keep target fully on-screen with 40px margin
+  target.x = Math.random() * (w - triWidth - 80) + 40;
+  target.y = Math.random() * (h - triHeight - 80) + 40;
+  target.rot = Math.floor(Math.random() * 360);
+
+  // Update the outline triangle points
+  outlineBox.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${triWidth} ${triHeight}" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,${triHeight} ${triWidth},${triHeight} 0,0"></polygon>
+    </svg>
+  `;
+  outlineBox.style.width = triWidth + 'px';
+  outlineBox.style.height = triHeight + 'px';
+  outlineBox.style.left = target.x + 'px';
+  outlineBox.style.top = target.y + 'px';
+  outlineBox.style.transform = `rotate(${target.rot}deg)`;
+
+  // set player start at right side (inside viewport)
+  player.x = Math.max(40, w - triWidth - 40);
+  player.y = Math.max(40, Math.floor(h / 2 - triHeight / 2));
+  player.rot = 0;
+
+  // Update player triangle to match size
+  playerBox.innerHTML = `
+    <svg width="100%" height="100%" viewBox="0 0 ${triWidth} ${triHeight}" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,${triHeight} ${triWidth},${triHeight} 0,0"></polygon>
+    </svg>
+  `;
+  playerBox.style.width = triWidth + 'px';
+  playerBox.style.height = triHeight + 'px';
+
+  updatePlayer();
+}
+
+
+  function updatePlayer() {
+    playerBox.style.left = player.x + 'px';
+    playerBox.style.top = player.y + 'px';
+    playerBox.style.transform = `rotate(${player.rot}deg)`;
+    checkAlignment();
+  }
+
+  function checkAlignment() {
+    // positions compared using bounding-box top-left (same as how we position the divs)
+    const posMatch =
+      Math.abs(player.x - target.x) <= 3 &&
+      Math.abs(player.y - target.y) <= 3;
+
+    // rotation difference normalized to [0,360)
+    const diff = Math.abs((player.rot - target.rot + 360) % 360);
+    const rotDiff = Math.min(diff, 360 - diff); // smallest angular difference
+    const rotMatch = rotDiff <= 1;
+
+    submitBtn.disabled = !(posMatch && rotMatch);
+  }
+
+  function startTimer() {
+    timerDisplay.textContent = `Time left: ${timeLeft}s`;
+    timer = setInterval(() => {
+      timeLeft--;
+      timerDisplay.textContent = `Time left: ${timeLeft}s`;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        gameOver = true;
+        stopAction();
+        overlay.style.display = 'flex';
+      }
+    }, 1000);
+  }
+
+  /* ===== HOLD LOGIC ===== */
+  function startAction(fn) {
+    if (gameOver) return;
+    if (actionInterval) return;
+    actionInterval = setInterval(() => {
+      if (!gameOver) {
+        fn();
+        updatePlayer();
+      }
+    }, 30); // speed (lower = faster)
+  }
+
+  function stopAction() {
+    clearInterval(actionInterval);
+    actionInterval = null;
+  }
+
+  /* Button bindings */
+bindHold(upBtn,    () => player.y -= shiftHeld ? 5 : 1);
+bindHold(downBtn,  () => player.y += shiftHeld ? 5 : 1);
+bindHold(leftBtn,  () => player.x -= shiftHeld ? 5 : 1);
+bindHold(rightBtn, () => player.x += shiftHeld ? 5 : 1);
+bindHold(rotateBtn,() => player.rot = (player.rot + (shiftHeld ? 5 : 1)) % 360);
+
+  function bindHold(btn, action) {
+    btn.addEventListener('mousedown', () => startAction(action));
+    btn.addEventListener('touchstart', e => { e.preventDefault(); startAction(action); });
+
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev =>
+      btn.addEventListener(ev, stopAction)
+    );
+  }
+
+  let keyAction = null;
+  document.addEventListener('keydown', e => {
+    if (gameOver) return;
+    if (keyAction) return;
+
+switch (e.key) {
+  case 'ArrowUp':    keyAction = () => player.y -= shiftHeld ? 5 : 1; break;
+  case 'ArrowDown':  keyAction = () => player.y += shiftHeld ? 5 : 1; break;
+  case 'ArrowLeft':  keyAction = () => player.x -= shiftHeld ? 5 : 1; break;
+  case 'ArrowRight': keyAction = () => player.x += shiftHeld ? 5 : 1; break;
+  case ' ':          keyAction = () => player.rot = (player.rot + (shiftHeld ? 5 : 1)) % 360; break;
+}
+
+    startAction(keyAction);
+  });
+
+  document.addEventListener('keyup', () => {
+    keyAction = null;
+    stopAction();
+  });
+
+  // Optional: keep the triangles inside the viewport on resize
+  window.addEventListener('resize', () => {
+    // if target/player end up offscreen after resize, clamp them
+    const w = window.innerWidth, h = window.innerHeight;
+    player.x = Math.min(player.x, Math.max(40, w - BOX_W - 40));
+    player.y = Math.min(player.y, Math.max(40, h - BOX_H - 40));
+    outlineBox.style.left = target.x + 'px';
+    outlineBox.style.top = target.y + 'px';
+    updatePlayer();
+  });
+
+submitBtn.addEventListener("click", () => {
+    placeholderText.style.display = "block";
+});
+</script>
+</body>
+</html>
