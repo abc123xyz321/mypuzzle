@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Type the Words Challenge</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    max-width: 500px;
+    margin: auto;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+}
+button {
+    padding: 15px 25px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 10px 0;
+    background-color: #007BFF;
+    color: white;
+    transition: background-color 0.2s;
+}
+button:hover {
+    background-color: #0056b3;
+}
+button:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+input {
+    padding: 12px;
+    font-size: 16px;
+    width: 80%;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+.submit-btn {
+    background-color: #28a745;
+}
+.submit-btn:hover {
+    background-color: #218838;
+}
+#completionMessage {
+    display: none;
+    margin-top: 20px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+}
+.word-label {
+    font-size: 18px;
+    margin-top: 15px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Authentication</h1>
+    <p style="font-size:16px; color:#555; margin-bottom:20px;">Find the correct word from the Wikipedia articles. NOTE: "From Wikipedia, the...", notes before the actual article, Arabic numerals/citations/years, and section titles are excluded.</p>
+
+    <div id="challengeContainer">
+        <div>
+            <p class="word-label">https://en.wikipedia.org/w/index.php?oldid=1374977553, paragraph 9, word 18</p>
+            <input type="text" class="word-input" data-word="referred" placeholder="Type the word here">
+        </div>
+        <div>
+            <p class="word-label">https://en.wikipedia.org/w/index.php?oldid=1376493111, paragraph 5, word 35</p>
+            <input type="text" class="word-input" data-word="penetrated" placeholder="Type the word here">
+        </div>
+        <div>
+            <p class="word-label">https://en.wikipedia.org/w/index.php?oldid=1368790956, paragraph 2, word 16</p>
+            <input type="text" class="word-input" data-word="discussions" placeholder="Type the word here">
+        </div>
+        <div>
+            <p class="word-label">https://en.wikipedia.org/w/index.php?oldid=1374701318, paragraph 8, word 48</p>
+            <input type="text" class="word-input" data-word="numerous" placeholder="Type the word here">
+        </div>
+        <div>
+            <p class="word-label">https://en.wikipedia.org/w/index.php?oldid=1378313982, image 8 caption, word 11</p>
+            <input type="text" class="word-input" data-word="gradually" placeholder="Type the word here">
+        </div>
+
+        <button id="submitBtn" class="submit-btn" disabled>Submit</button>
+        <p id="completionMessage">maroontelephone66</p>
+    </div>
+</div>
+
+<script>
+const inputs = document.querySelectorAll(".word-input");
+const submitBtn = document.getElementById("submitBtn");
+const completionMessage = document.getElementById("completionMessage");
+
+function checkAllCorrect() {
+    let allCorrect = true;
+    inputs.forEach(input => {
+        const expected = input.dataset.word.toLowerCase();
+        const actual = input.value.trim().toLowerCase();
+        if(actual !== expected) allCorrect = false;
+    });
+    submitBtn.disabled = !allCorrect;
+}
+
+inputs.forEach(input => {
+    input.addEventListener("input", checkAllCorrect);
+});
+
+submitBtn.addEventListener("click", () => {
+    completionMessage.style.display = "block";
+});
+</script>
+</body>
+</html>
