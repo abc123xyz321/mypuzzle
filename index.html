@@ -8,7 +8,11 @@
     .top { position:fixed; top:10px; left:10px; display:flex; gap:6px; align-items:center; }
     input, button { font-family: 'Courier New', monospace; }
     input[type='text'] { width:16.6667vw; } /* roughly one-sixth of screen width */
-    #mainResponse { margin-top: 100px; }
+#mainResponse {
+  margin-top: 100px;
+  white-space: pre-wrap;
+  font-family: 'Courier New', monospace;
+}
   </style>
 </head>
 <body>
@@ -51,7 +55,8 @@ window.addEventListener('DOMContentLoaded', () => {
     'help': 'Find the passwords...',
     'bluescissors11': 'bruh that one was literally the incorrect one',
     'jew': 'I know you are already!',
-    'Netanyahu': 'Unfortunately he doesnt have anything to do with this puzzle'
+    'Netanyahu': 'Unfortunately he doesnt have anything to do with this puzzle',
+    'i like penis': 'B B B B B B B W W W W B W W W W W W B B B B B B B\nB W W W W W B W W B W W W W W B W W B W W W W W B\nB W B B B W B W B W B B W B B B W W B W B B B W B\nB W B B B W B W W B W B B W B B W W B W B B B W B\nB W B B B W B W W B B W W W W B B W B W B B B W B\nB W W W W W B W W W B W W B B B W W B W W W W W B\nB B B B B B B W B W B W B W B W B W B B B B B B B\nW W W W W W W W B W W W B W W W B W W W W W W W W\nB B B W B B B B B W W W B B B W B B B W W W B W W\nB B W W W B W W B B W W W B B W B W B W B W W B W\nB B W B W B B W W W B B W B W B B B B W W B W W W\nW B W B B W W W B B B W B W W W W W B B W W W B B\nB B W B W W B W W W B W B W B W W W W B W W B B B\nW B B W B B W B W W B B B B B B B W W W B W W B W\nB W B W B W B B W B W B B W W W W B B W W B W B W\nW B B W B W W W B W W B B B W W B B B B W W W W W\nB W B W B B B W W W B W W B B W B B B B B W B W B\nW W W W W W W W B B W W W B B B B W W W B W W B W\nB B B B B B B W B W W W B B W W B W B W B B W B B\nB W W W W W B W B W B B B B B W B W W W B B W B B\nB W B B B W B W B W W W W B B W B B B B B W B W W\nB W B B B W B W W B W B B B W W B W B B B W W W W\nB W B B B W B W B B B W B B W B B B W W W B W W B\nB W W W W W B W B B B B B B B W W W W W B B W W B\nB B B B B B B W B W W W W B W B B B W W B B W B B'
   };
 
   const specialTrigger = '1987';
